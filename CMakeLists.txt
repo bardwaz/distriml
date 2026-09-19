@@ -4,7 +4,7 @@ project(DistriML CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Protobuf and gRPC (Assumes vcpkg or system install)
+# Find Protobuf and gRPC
 find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 
@@ -15,25 +15,25 @@ file(MAKE_DIRECTORY ${GENERATED_PROTO_DIR})
 # Retrieve the gRPC C++ plugin path
 get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
 
-# Custom command to invoke protoc and generate C++ stubs
+# Custom command to invoke protoc and generate C++ stubs for the Ring protocol
 add_custom_command(
-    OUTPUT "${GENERATED_PROTO_DIR}/parameter_server.pb.cc"
-           "${GENERATED_PROTO_DIR}/parameter_server.pb.h"
-           "${GENERATED_PROTO_DIR}/parameter_server.grpc.pb.cc"
-           "${GENERATED_PROTO_DIR}/parameter_server.grpc.pb.h"
+    OUTPUT "${GENERATED_PROTO_DIR}/ring_node.pb.cc"
+           "${GENERATED_PROTO_DIR}/ring_node.pb.h"
+           "${GENERATED_PROTO_DIR}/ring_node.grpc.pb.cc"
+           "${GENERATED_PROTO_DIR}/ring_node.grpc.pb.h"
     COMMAND protobuf::protoc
     ARGS --grpc_out="${GENERATED_PROTO_DIR}"
          --cpp_out="${GENERATED_PROTO_DIR}"
          -I "${CMAKE_CURRENT_SOURCE_DIR}/proto"
          --plugin=protoc-gen-grpc="${grpc_cpp_plugin_location}"
-         "${CMAKE_CURRENT_SOURCE_DIR}/proto/parameter_server.proto"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/proto/parameter_server.proto"
+         "${CMAKE_CURRENT_SOURCE_DIR}/proto/ring_node.proto"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/proto/ring_node.proto"
 )
 
 # Common library for generated proto stubs
 add_library(distriml_proto
-    "${GENERATED_PROTO_DIR}/parameter_server.pb.cc"
-    "${GENERATED_PROTO_DIR}/parameter_server.grpc.pb.cc"
+    "${GENERATED_PROTO_DIR}/ring_node.pb.cc"
+    "${GENERATED_PROTO_DIR}/ring_node.grpc.pb.cc"
 )
 target_include_directories(distriml_proto PUBLIC "${GENERATED_PROTO_DIR}")
 target_link_libraries(distriml_proto PUBLIC protobuf::libprotobuf gRPC::grpc++)
@@ -42,12 +42,7 @@ target_link_libraries(distriml_proto PUBLIC protobuf::libprotobuf gRPC::grpc++)
 add_library(distriml_compression src/compression/quantizer.cc)
 target_include_directories(distriml_compression PUBLIC src)
 
-# Parameter Server Executable
-add_executable(parameter_server src/server/server.cc)
-target_include_directories(parameter_server PRIVATE src)
-target_link_libraries(parameter_server distriml_proto distriml_compression)
-
-# Worker Client Executable
-add_executable(worker src/worker/worker.cc)
-target_include_directories(worker PRIVATE src)
-target_link_libraries(worker distriml_proto distriml_compression)
+# Decentralized Peer-to-Peer Node Executable
+add_executable(ring_node src/node/node.cc)
+target_include_directories(ring_node PRIVATE src)
+target_link_libraries(ring_node distriml_proto distriml_compression)

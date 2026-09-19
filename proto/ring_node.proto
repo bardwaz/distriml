@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package distriml;
+
+// In a decentralized Ring architecture, every node is both a client and a server.
+service RingNode {
+  // Receive an asynchronous chunk of updates from the left neighbor in the ring.
+  rpc PushRingChunk (ChunkRequest) returns (ChunkResponse) {}
+}
+
+message ChunkRequest {
+  // Which segment of the global model this chunk represents
+  int32 chunk_index = 1; 
+  
+  // The heavily optimized 8-bit quantized payload
+  bytes quantized_data = 2;
+  
+  // Scaling factor to restore the float values
+  float scale_factor = 3;
+}
+
+message ChunkResponse {
+  bool success = 1;
+}
