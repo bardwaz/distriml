@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package distriml;
+
+// The central Parameter Server service
+service ParameterServer {
+  // Worker registers itself with the server
+  rpc RegisterWorker (RegisterRequest) returns (RegisterResponse) {}
+
+  // Worker pulls the latest global weights
+  rpc PullWeights (PullRequest) returns (PullResponse) {}
+
+  // Worker pushes its locally computed gradients (quantized)
+  rpc PushGradients (PushRequest) returns (PushResponse) {}
+}
+
+message RegisterRequest {
+  string worker_id = 1;
+}
+
+message RegisterResponse {
+  bool success = 1;
+  int32 model_size = 2; // Tells the worker how many parameters the model has
+}
+
+message PullRequest {
+  string worker_id = 1;
+}
+
+message PullResponse {
+  // We send the global weights as standard floats. 
+  // (In a real system, downlink from server to client is rarely the bottleneck, 
+  // uplink from 1000s of clients to one server is. So we optimize the PushRequest).
+  repeated float weights = 1; 
+}
+
+message PushRequest {
+  string worker_id = 1;
+  
+  // The hardcore network optimization: 
+  // Gradients are quantized from 32-bit floats to 8-bit integers 
+  // and sent as raw bytes to slash network bandwidth by 75%.
+  bytes quantized_gradients = 2;
+  
+  // The scaling factor used to map the 8-bit ints back to 32-bit floats on the server
+  float scale_factor = 3; 
+}
+
+message PushResponse {
+  bool success = 1;
+}
